@@ -1,0 +1,3 @@
+go run quizgame.go -h
+go run quizgame.go -csv="problems.csv"
+go run quizgame.go -csv="problems.csv" -time 1
