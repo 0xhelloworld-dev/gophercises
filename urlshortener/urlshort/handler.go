@@ -3,6 +3,8 @@ package urlshort
 import (
 	"fmt"
 	"net/http"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 // MapHandler will return an http.HandlerFunc (which also
@@ -13,11 +15,11 @@ import (
 // http.Handler will be called instead.
 func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		for pathKey, destination := range pathsToUrls {
-			if pathKey == r.URL.Path {
-				fmt.Printf("Redirecting user to %s", destination)
-				http.Redirect(w, r, destination, http.StatusSeeOther)
-			}
+		pathKey := r.URL.Path
+		if destination, ok := pathsToUrls[pathKey]; ok {
+			fmt.Printf("Redirecting user to %s", destination)
+			http.Redirect(w, r, destination, http.StatusSeeOther)
+			return
 		}
 		fallback.ServeHTTP(w, r)
 	}
@@ -39,7 +41,22 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 //
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
+
+type yamlRecord struct {
+	Path string `yaml:"path"` //these are called yaml tags
+	Url  string `yaml:"url"`  //these should match the keys in the yaml file. helps yaml.Unmarshal match yaml keys to struct fields
+}
+
 func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
-	// TODO: Implement this...
-	return nil, nil
+	var records []yamlRecord
+	err := yaml.Unmarshal(yml, &records)
+	if err != nil {
+		return nil, err
+	}
+	pathToUrls := make(map[string]string)
+	for _, record := range records {
+		pathToUrls[record.Path] = record.Url
+	}
+
+	return MapHandler(pathToUrls, fallback), nil
 }

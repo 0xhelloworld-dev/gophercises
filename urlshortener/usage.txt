@@ -1,1 +1,3 @@
 go run shorturl.go
+http://127.0.0.1:8080/yaml-godoc
+http://127.0.0.1:8080/urlshort-final
