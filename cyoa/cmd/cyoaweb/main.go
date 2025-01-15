@@ -15,6 +15,7 @@ func main() {
 	port := flag.Int("port", 3000, "listening port for app")
 	filename := flag.String("file", "/Users/jonathanchua/Desktop/goProjects/gophercises/cyoa/gopher.json", "JSON file with the CYOA story")
 	flag.Parse()
+
 	fmt.Printf("Using the story in %s.\n", *filename)
 	f, err := os.Open(*filename) //flag.String returns the address of a string variable that stores the value https://pkg.go.dev/flag#String
 	if err != nil {

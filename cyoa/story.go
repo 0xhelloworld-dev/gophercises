@@ -3,7 +3,9 @@ package cyoa
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 	"text/template"
 )
 
@@ -55,10 +57,21 @@ type handler struct {
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	err := tpl.Execute(w, h.s["intro"])
-	if err != nil {
-		panic(err)
+	path := strings.TrimSpace(r.URL.Path)
+	if path == "" || path == "/" {
+		path = "/intro"
 	}
+	//"/intro" => "intro", used to get the Chapter corresponding to "intro" key
+	path = path[1:]
+	if chapter, ok := h.s[path]; ok {
+		err := tpl.Execute(w, chapter)
+		if err != nil {
+			log.Printf("%v", err)
+			http.Error(w, "Soemthing went wrong when executing template...", http.StatusInternalServerError)
+		}
+		return
+	}
+	http.Error(w, "Chapter not found.", http.StatusNotFound)
 }
 
 func JsonToStory(r io.Reader) (Story, error) {
