@@ -48,23 +48,48 @@ var handlerTempl = `
 </body>
 </html>`
 
-func NewHandler(s Story) http.Handler {
-	return handler{s}
+type HandlerOption func(h *handler)
+
+func WithTemplate(t *template.Template) HandlerOption { //return a HandlerOption type
+	//provide multiple functions that allows you to set options
+	//if you want to use an option, functional options explicitly specify what data you need
+	return func(h *handler) {
+		h.t = t
+	}
+}
+
+func WithPathFunc(fn func(r *http.Request) string) HandlerOption { //allow you to specify a custom path handler
+	return func(h *handler) {
+		h.pathFn = fn
+	}
+}
+
+func NewHandler(s Story, opts ...HandlerOption) http.Handler {
+	h := handler{s, tpl, defaultPathFn}
+	for _, opt := range opts {
+		opt(&h)
+	}
+	return h
 }
 
 type handler struct {
-	s Story
+	s      Story
+	t      *template.Template
+	pathFn func(r *http.Request) string
 }
 
-func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func defaultPathFn(r *http.Request) string {
 	path := strings.TrimSpace(r.URL.Path)
 	if path == "" || path == "/" {
 		path = "/intro"
 	}
-	//"/intro" => "intro", used to get the Chapter corresponding to "intro" key
-	path = path[1:]
+	return path[1:]
+}
+
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := h.pathFn(r)
 	if chapter, ok := h.s[path]; ok {
-		err := tpl.Execute(w, chapter)
+		err := h.t.Execute(w, chapter)
 		if err != nil {
 			log.Printf("%v", err)
 			http.Error(w, "Soemthing went wrong when executing template...", http.StatusInternalServerError)

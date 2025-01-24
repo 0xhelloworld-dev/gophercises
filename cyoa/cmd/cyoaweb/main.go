@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"text/template"
 
 	"github.com/0xhelloworld-dev/cyoa"
 )
@@ -26,7 +28,42 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	h := cyoa.NewHandler(story)
+	// Using custom template + custom path function
+	tpl := template.Must(template.New("").Parse(storyTempl))
+	h := cyoa.NewHandler(story, cyoa.WithTemplate(tpl), cyoa.WithPathFunc(customPathFn))
+
+	//default template
+	//h := cyoa.NewHandler(story)
+
 	fmt.Printf("Starting the server on port: %d\n", *port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *port), h))
 }
+
+func customPathFn(r *http.Request) string {
+	path := strings.TrimSpace(r.URL.Path)
+	if path == "/cyoa" || path == "/cyoa/" {
+		path = "/cyoa/intro"
+	}
+	//returns "intro" string
+	return path[len("/cyoa/"):]
+}
+
+var storyTempl = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>title</title>
+</head>
+<body>
+    <h1> {{.Title}} </h1>
+    {{range .Paragraphs}}
+    <p>{{.}}</p>
+    {{end}}
+    <ul>
+        {{range .Options}}
+        <li><a href ="/cyoa/{{.Chapter}}">{{.Text}}</a></li>
+        {{end}}
+    </ul>
+</body>
+</html>`
