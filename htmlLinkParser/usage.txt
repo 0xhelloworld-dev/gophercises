@@ -16,3 +16,9 @@ Purpose
             * false: check if there is text
                 * true: get text
                 * false: move to next line
+
+
+TODO:
+* Review x/net/html Package
+    html.NewTokenizer(r)
+* x/net/html needs to be installed

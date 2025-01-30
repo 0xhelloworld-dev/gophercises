@@ -1,5 +1,5 @@
 module github.com/0xhelloworld-dev/gophercises/htmllinkparser
 
-go 1.19
+go 1.23.5
 
-require golang.org/x/net v0.34.0 // indirect
+require golang.org/x/net v0.34.0
