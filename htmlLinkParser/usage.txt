@@ -1,0 +1,18 @@
+Purpose
+* Package that parses HTML file + extracts links. 
+* Transforms links parsed -> data structure that includes href value + data inside <a> tags. 
+
+* Take user input
+    * open html file
+    * convert it into a parsable format for x/net/html
+* Look for <a> tags
+    * get href value from a tag
+    * declare a local variable which will store each piece of text identified
+        * var textString string
+        * textstring = textString + newString
+    * parse each line
+        * check if line begins with a tag
+            * true: get contents of tag
+            * false: check if there is text
+                * true: get text
+                * false: move to next line
