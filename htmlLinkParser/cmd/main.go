@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/net/html"
+	linkparser "github.com/0xhelloworld-dev/gophercises/htmllinkparser"
 )
 
 func main() {
@@ -20,14 +20,23 @@ func main() {
 	//verify we are opening a file
 	//log.Printf("Printing value of 'f': %v", f)
 
-	rootNode, err := html.Parse(f)
+	links, err := linkparser.ParseLinks(f)
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
 
-	for node := range rootNode.Descendants() {
-		if node.Type == html.ElementNode {
-			fmt.Printf("Node data: %v\n", node.Data)
+	fmt.Println(links)
+
+	/*
+		rootNode, err := html.Parse(f)
+		if err != nil {
+			fmt.Println("Error: ", err)
 		}
-	}
+
+		for node := range rootNode.Descendants() {
+			if node.Type == html.ElementNode {
+				fmt.Printf("Node data: %v\n", node.Data)
+			}
+		}
+	*/
 }
