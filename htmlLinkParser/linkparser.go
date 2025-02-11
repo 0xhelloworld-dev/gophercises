@@ -1,7 +1,6 @@
 package htmllinkparser
 
 import (
-	"fmt"
 	"io"
 
 	html "golang.org/x/net/html"
@@ -17,32 +16,33 @@ type Link struct {
 
 // Parse takes HTML document and returns a slice of our Link type.
 func ParseLinks(r io.Reader) ([]Link, error) {
-	doc, err := html.Parse(r)
+	docNode, err := html.Parse(r)
 	if err != nil {
 		return nil, err
 	}
-	dfs(doc, "")
+	searchLinks(docNode, "")
 	return linkList, nil
 }
 
-func dfs(n *html.Node, padding string) {
-	msg := n.Data
-	if n.Type == html.ElementNode {
-		msg = "<" + msg + ">"
-		if n.Data == "a" {
-			var linkEntry Link
-			url := n.Attr[0].Val
-			linkEntry.Href = url
-			//fmt.Printf("Attributes: %v\n", url)
-			if n.FirstChild != nil {
-				text := n.FirstChild.Data
-				linkEntry.Text = text
+func searchLinks(n *html.Node, padding string) {
+	if n.Type == html.ElementNode && n.Data == "a" {
+		var linkEntry Link
+		var url string
+		for _, attr := range n.Attr { //iterate through all the attributes in the <a> tag
+			if attr.Key == "href" {
+				url = attr.Val
+				linkEntry.Href = url
 			}
-			linkList = append(linkList, linkEntry)
 		}
+		linkEntry.Href = url
+		//fmt.Printf("Attributes: %v\n", url)
+		if n.FirstChild != nil {
+			text := n.FirstChild.Data
+			linkEntry.Text = text
+		}
+		linkList = append(linkList, linkEntry)
 	}
-	fmt.Println(padding, msg)
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		dfs(c, padding+"  ")
+		searchLinks(c, padding+"  ")
 	}
 }

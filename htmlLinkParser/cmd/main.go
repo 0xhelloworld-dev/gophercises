@@ -25,8 +25,8 @@ func main() {
 		fmt.Println("Error: ", err)
 	}
 
-	for _, linkEntry := range links {
-		fmt.Printf("Link Entry: %v\n", linkEntry)
+	for _, link := range links {
+		fmt.Printf("Href:%s, Text:%s\n", link.Href, link.Text)
 	}
 
 }
