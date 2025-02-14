@@ -2,6 +2,7 @@ package htmllinkparser
 
 import (
 	"io"
+	"strings"
 
 	html "golang.org/x/net/html"
 )
@@ -38,7 +39,7 @@ func searchLinks(n *html.Node, padding string) {
 		//fmt.Printf("Attributes: %v\n", url)
 		if n.FirstChild != nil {
 			text := n.FirstChild.Data
-			linkEntry.Text = text
+			linkEntry.Text = strings.TrimSpace(text)
 		}
 		linkList = append(linkList, linkEntry)
 	}

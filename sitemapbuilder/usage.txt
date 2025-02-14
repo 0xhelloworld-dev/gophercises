@@ -1,0 +1,11 @@
+* Need to consider how we're gonna solve
+
+
+* Script Functionality:
+    * Track which pages have already been parsed
+    * Use our linkparser package and run it on every page
+    * Build a http client that will take in either fqdn (https://domain.com) or relative link: (/about-us)
+        * or we can only store things as full path https://domain.com and disregard relative paths
+* User input
+    * accepts a domain "https://google.com" and will go through and try to parse all the links 
+    
