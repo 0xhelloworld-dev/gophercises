@@ -8,4 +8,10 @@
         * or we can only store things as full path https://domain.com and disregard relative paths
 * User input
     * accepts a domain "https://google.com" and will go through and try to parse all the links 
-    
+    * performs an http request to the domain
+        * uses linkparser package to parse the http response for links
+            * the outputted links are added to a global slice 
+                * notScanned := ["record1", "record2"]
+            * After each scan, the domains are dropped from "notScanned" and put into "scanned"
+                * scanned := ["record1"]
+

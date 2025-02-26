@@ -6,18 +6,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0xhelloworld-dev/gophercises/sitemapbuilder/queue"
+
 	linkparser "github.com/0xhelloworld-dev/gophercises/htmllinkparser"
 )
 
-var scannedLinks []string
-
 func BuildSiteMap(targetURL string) {
-	links := getAndParsePage(targetURL)
-	callNumber := 1
-	scanLinks(links, targetURL, targetURL, callNumber)
+	urlsQueue := &queue.Queue{}
+	getLinksFromPage(targetURL, urlsQueue)
+
+	//need to insert next item in urlsQueue.UrlQueue[0] as variable into ProcessQueue(urlsQueue.UrlQueue[0])
+	urlsQueue.ProcessQueue(func(targetURL string, q *queue.Queue) { getLinksFromPage(targetURL, urlsQueue) })
 }
 
-func getAndParsePage(targetURL string) []linkparser.Link {
+func getLinksFromPage(targetURL string, queue *queue.Queue) {
+	//instead of returning the links, it should add these links to our queue
+	fmt.Printf("~~~~~~~~~Executing getLinksFromPage for %v~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", targetURL)
 	resp, err := http.Get(targetURL)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -26,68 +30,29 @@ func getAndParsePage(targetURL string) []linkparser.Link {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	return links
-}
-
-// DFS search
-// Links are gathered from every page
-// for each link found from the page:
-//
-//	/index.html
-//		-> /hello.html (scan)
-//			-> /about.html (scan)
-//				-> /deep.html (scan)
-//				-> /profile.html (scan)
-//			-> /profile.html (skip, we've seen it in about.html)
-//		-> /profile.html (skip, we've seen it in about.html)
-//			-> deep.html (skip, we've seen it in about.html)
-//	check if we scanned it before
-//		if we have skip it
-//	if we havent scanned it, scan it
-func scanLinks(links []linkparser.Link, domainTarget string, currentURL string, callNumber int) {
-	fmt.Printf("~~~~~Running scanLinks() for %s~~~~~~~~~~~~ callNumber: %d\n\n", currentURL, callNumber)
-	//var currentQueue []string
-	fmt.Printf("Iterating through every link gathered from %s\n\n", currentURL)
+	fmt.Printf("[+] CurrentQueue: %v\n[+] ScannedUrls: %s\n", queue.UrlQueue, queue.ScannedURLs)
+	fmt.Printf("~~~~~~~~~~~~~~~~\n[+] Queue length: %v\n[+] ScannedUrls length: %d\n~~~~~~~~~~~~~~~~\n", len(queue.UrlQueue), len(queue.ScannedURLs))
 	for _, link := range links {
-		isInScope := inScope(link.Href, domainTarget)
-		if isInScope {
-			//check if it has been scanned
-			targetLink := formatHref(link.Href, domainTarget)
-			isScanned := isLinkScanned(targetLink, scannedLinks)
-			//fmt.Printf("Target Link: %s\n\n", targetLink)
-			if isScanned {
-				//fmt.Printf("%v has been scanned, skipping\n", targetLink)
-				continue
-			}
-			targetPageLinks := getAndParsePage(targetLink)
-			fmt.Printf("Got links for %s\n\n", targetLink)
-
-			//currentQueue = addToQueue(targetPageLinks, currentQueue)
-
-			scannedLinks = append(scannedLinks, targetLink)
-			fmt.Printf("Scanned Links: %v\n\n", scannedLinks)
-			time.Sleep(1 * time.Second)
-
-			scanLinks(targetPageLinks, domainTarget, targetLink, callNumber+1)
-		} else {
-			//fmt.Printf("Skipping %s - not in scope\n\n", link.Href)
+		isInScope := inScope(link.Href, targetURL) //important to put link.Href here, not normalized link
+		if !isInScope {
+			//fmt.Printf("\t[+] Not in scope: %s \n", link.Href)
+			continue
 		}
-	}
-	fmt.Printf("Finished iterating through links for %s\n", currentURL)
-}
-
-func addToQueue(targetPageLinks []linkparser.Link, currentQueue []string) []string {
-	for _, link := range targetPageLinks {
-		for _, inQueue := range currentQueue {
-			if link.Href == inQueue {
-				fmt.Printf("Link from new page %s matches link inQueue [%s]\n\n", link.Href, inQueue)
-				continue
-			}
-			currentQueue = append(currentQueue, link.Href)
-			fmt.Printf("Current Queue: %v\n\n", currentQueue)
+		//fmt.Printf("\t[+] Link Href: %s\n", link.Href)
+		normalizedURL := normalizeHref(link.Href, targetURL)
+		isScanned := isLinkScanned(normalizedURL, queue.ScannedURLs)
+		isInQueue := queue.InQueue(normalizedURL)
+		if isScanned || isInQueue {
+			//we don't want to queue up anything that is already in queue, scanned, or is not in scope
+			//fmt.Printf("\t[+] Skipping url: [%s]\n", normalizedURL)
+			continue
 		}
+
+		queue.Enqueue(normalizedURL)
+		time.Sleep(100 * time.Millisecond)
+		//fmt.Printf("\t[+] Added Url to Queue:[%s]\n", normalizedURL)
 	}
-	return currentQueue
+	time.Sleep(5 * time.Second)
 }
 
 func isLinkScanned(targetLink string, scannedLinks []string) bool {
@@ -100,7 +65,7 @@ func isLinkScanned(targetLink string, scannedLinks []string) bool {
 }
 
 // Transforms all links to a universal format: https://{domain}/{path}
-func formatHref(href string, targetURL string) string {
+func normalizeHref(href string, targetURL string) string {
 	if strings.HasPrefix(href, targetURL) {
 		//Addresses "http://test.com/about" cases
 		return href
@@ -115,10 +80,12 @@ func formatHref(href string, targetURL string) string {
 	}
 }
 
+// Accepts a raw Href from link.Href
+// Ideally you should check if it is in scope before processing
 func inScope(href string, targetURL string) bool {
-	if strings.HasPrefix(href, targetURL) {
+	if strings.HasPrefix(href, targetURL) { //does href have prefix of https://target.com?
 		return true
-	} else if strings.HasPrefix(href, "/") {
+	} else if strings.HasPrefix(href, "/") { //is it a relative href "/about"
 		return true
 	} else {
 		return false
@@ -126,3 +93,6 @@ func inScope(href string, targetURL string) bool {
 
 	//need to account for cases where relative link is "#" or ","
 }
+
+//there is a bug in how i'm Queuing things up
+//it adds the full url
