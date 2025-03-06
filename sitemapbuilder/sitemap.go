@@ -3,20 +3,23 @@ package sitemapbuilder
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/0xhelloworld-dev/gophercises/sitemapbuilder/queue"
+	"github.com/0xhelloworld-dev/gophercises/sitemapbuilder/smUtils"
 
 	linkparser "github.com/0xhelloworld-dev/gophercises/htmllinkparser"
 )
 
-func BuildSiteMap(targetURL string) {
+var globalBaseURL string
+
+func BuildSiteMap(baseURL string) {
 	urlsQueue := &queue.Queue{}
-	getLinksFromPage(targetURL, urlsQueue)
+	globalBaseURL = baseURL
+	getLinksFromPage(baseURL, urlsQueue)
 
 	//need to insert next item in urlsQueue.UrlQueue[0] as variable into ProcessQueue(urlsQueue.UrlQueue[0])
-	urlsQueue.ProcessQueue(func(targetURL string, q *queue.Queue) { getLinksFromPage(targetURL, urlsQueue) })
+	urlsQueue.ProcessQueue(getLinksFromPage)
 }
 
 func getLinksFromPage(targetURL string, queue *queue.Queue) {
@@ -26,21 +29,27 @@ func getLinksFromPage(targetURL string, queue *queue.Queue) {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
+	defer resp.Body.Close()
 	links, err := linkparser.ParseLinks(resp.Body)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	fmt.Printf("[+] CurrentQueue: %v\n[+] ScannedUrls: %s\n", queue.UrlQueue, queue.ScannedURLs)
-	fmt.Printf("~~~~~~~~~~~~~~~~\n[+] Queue length: %v\n[+] ScannedUrls length: %d\n~~~~~~~~~~~~~~~~\n", len(queue.UrlQueue), len(queue.ScannedURLs))
+	fmt.Printf("[+] CurrentQueue: %v\n----------\n[+] ScannedUrls: %s\n", queue.UrlQueue, queue.ScannedURLs)
+	fmt.Printf("----------\n[+] Queue length: %v\n[+] ScannedUrls length: %d\n-------------------------\n", len(queue.UrlQueue), len(queue.ScannedURLs))
+	processLinks(links, queue)
+	time.Sleep(1 * time.Second)
+}
+
+func processLinks(links []linkparser.Link, queue *queue.Queue) {
 	for _, link := range links {
-		isInScope := inScope(link.Href, targetURL) //important to put link.Href here, not normalized link
+		isInScope := smUtils.InScope(link.Href, globalBaseURL) //important to put link.Href here, not normalized link
 		if !isInScope {
 			//fmt.Printf("\t[+] Not in scope: %s \n", link.Href)
 			continue
 		}
 		//fmt.Printf("\t[+] Link Href: %s\n", link.Href)
-		normalizedURL := normalizeHref(link.Href, targetURL)
-		isScanned := isLinkScanned(normalizedURL, queue.ScannedURLs)
+		normalizedURL := smUtils.NormalizeHref(link.Href, globalBaseURL)
+		isScanned := smUtils.IsLinkScanned(normalizedURL, queue.ScannedURLs)
 		isInQueue := queue.InQueue(normalizedURL)
 		if isScanned || isInQueue {
 			//we don't want to queue up anything that is already in queue, scanned, or is not in scope
@@ -52,47 +61,9 @@ func getLinksFromPage(targetURL string, queue *queue.Queue) {
 		time.Sleep(100 * time.Millisecond)
 		//fmt.Printf("\t[+] Added Url to Queue:[%s]\n", normalizedURL)
 	}
-	time.Sleep(5 * time.Second)
-}
-
-func isLinkScanned(targetLink string, scannedLinks []string) bool {
-	for _, link := range scannedLinks {
-		if link == targetLink {
-			return true
-		}
-	}
-	return false
-}
-
-// Transforms all links to a universal format: https://{domain}/{path}
-func normalizeHref(href string, targetURL string) string {
-	if strings.HasPrefix(href, targetURL) {
-		//Addresses "http://test.com/about" cases
-		return href
-	} else if strings.HasPrefix(href, "/") {
-		//Addresses "/about" cases. Returns "https://test.com/about"
-		formattedURL := targetURL[:len(targetURL)-1] + href
-		return formattedURL
-	} else {
-		//Addresses "#" cases. Returns https://test.com/#
-		formattedURL := targetURL + href
-		return formattedURL
-	}
-}
-
-// Accepts a raw Href from link.Href
-// Ideally you should check if it is in scope before processing
-func inScope(href string, targetURL string) bool {
-	if strings.HasPrefix(href, targetURL) { //does href have prefix of https://target.com?
-		return true
-	} else if strings.HasPrefix(href, "/") { //is it a relative href "/about"
-		return true
-	} else {
-		return false
-	}
-
-	//need to account for cases where relative link is "#" or ","
 }
 
 //there is a bug in how i'm Queuing things up
 //it adds the full url
+//now that links are being queued and removed properly, i need to add something to generate the sitemap once finished
+//i also need to examine my code and make sure it makes sense
