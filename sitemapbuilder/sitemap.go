@@ -34,9 +34,11 @@ func getLinksFromPage(targetURL string, queue *queue.Queue) {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
+
+	processLinks(links, queue)
+
 	fmt.Printf("[+] CurrentQueue: %v\n----------\n[+] ScannedUrls: %s\n", queue.UrlQueue, queue.ScannedURLs)
 	fmt.Printf("----------\n[+] Queue length: %v\n[+] ScannedUrls length: %d\n-------------------------\n", len(queue.UrlQueue), len(queue.ScannedURLs))
-	processLinks(links, queue)
 	time.Sleep(1 * time.Second)
 }
 
