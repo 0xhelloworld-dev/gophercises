@@ -3,6 +3,8 @@ package queue
 import (
 	"fmt"
 	"slices"
+
+	"github.com/0xhelloworld-dev/gophercises/sitemapbuilder/xmlutils"
 )
 
 type Queue struct {
@@ -35,13 +37,18 @@ func (q *Queue) InQueue(url string) bool {
 
 // After we populate the initial queue of URLs
 // ProcessQueue is responsible for continuously processing the next item in the queue and passing it to our processFunc()
-func (q *Queue) ProcessQueue(processFunc func(string, *Queue)) {
+func (q *Queue) ProcessQueue(processFunc func(string, *Queue, *xmlutils.URLSet)) {
+	if xmlutils.Sitemap == nil {
+		fmt.Println("[ERROR] Sitemap is nil! Ensure it is initialized before calling ProcessQueue.")
+		return
+	}
+
 	for {
 		if len(q.UrlQueue) == 0 {
 			fmt.Printf("Finished queue")
 			break
 		}
 		url, _ := q.Dequeue()
-		processFunc(url, q)
+		processFunc(url, q, xmlutils.Sitemap)
 	}
 }
